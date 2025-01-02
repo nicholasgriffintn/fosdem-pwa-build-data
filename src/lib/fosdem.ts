@@ -132,7 +132,7 @@ const getStatus = (title) => {
 
 const getTitle = (title, status) => {
   if (status === 'amendment') {
-    return title.substring(10);
+    return title?.substring(10) || title;
   }
   return title;
 };
@@ -255,7 +255,7 @@ export async function buildData({ year }: { year: string }) {
 
     for (const room of day.room) {
       const roomName = getRoomName(room._attributes.name);
-      const slug = room._attributes.slug;
+      const slug = room._attributes.slug || room._attributes.name;
       const roomKey = slug.substring(0, 1).toUpperCase();
 
       const building = buildings[roomKey];
