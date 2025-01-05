@@ -146,7 +146,9 @@ interface DayInfo {
 interface RoomInfo {
   name: string;
   slug: string;
-  building: string;
+  buildingId: string;
+  building: typeof buildings[keyof typeof buildings] | null;
+  floor: string | null;
   eventCount: number;
 }
 
@@ -445,13 +447,18 @@ async function processScheduleData(
     // Process rooms in each day
     for (const room of day.room) {
       const roomName = getRoomName(room._attributes.name);
-      const building = roomName.split('.')[0];
+      const buildingMatch = roomName.match(/^(AW|[A-Z])/);
+      const buildingId = buildingMatch ? buildingMatch[1] : '';
+      const floorMatch = roomName.match(/^[A-Z]+\.?([0-9]+)/);
+      const floor = floorMatch ? floorMatch[1] : null;
 
       if (!result.rooms[roomName]) {
         result.rooms[roomName] = {
           name: roomName,
           slug: room._attributes.slug,
-          building,
+          buildingId,
+          building: buildingId in buildings ? buildings[buildingId as keyof typeof buildings] : null,
+          floor,
           eventCount: 0
         };
       }
@@ -492,20 +499,20 @@ async function processScheduleData(
           if (result.types[event.type]) {
             result.types[event.type].eventCount++;
             result.types[event.type].rooms.add(roomName);
-            result.types[event.type].buildings.add(building);
+            result.types[event.type].buildings.add(buildingId);
           }
 
           // Update day stats
           dayInfo.rooms.add(roomName);
-          dayInfo.buildings.add(building);
+          dayInfo.buildings.add(buildingId);
           dayInfo.tracks.add(event.trackKey);
         }
       }
 
       // Update building stats
-      if (result.buildings[building]) {
-        result.buildings[building].roomCount++;
-        result.buildings[building].eventCount += result.rooms[roomName].eventCount;
+      if (result.buildings[buildingId]) {
+        result.buildings[buildingId].roomCount++;
+        result.buildings[buildingId].eventCount += result.rooms[roomName].eventCount;
       }
     }
 
