@@ -6,14 +6,14 @@ const run = async (env: any) => {
 
 	await env.R2.put(`fosdem-${year}.json`, JSON.stringify(data, null, 2));
 
-	console.log("Data uploaded");
+	return data;
 };
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		await run(env);
+		const data = await run(env);
 
-		return new Response("Generated data for FOSDEM!");
+		return Response.json(data);
 	},
 	async scheduled(event: any, env: any, ctx: any) {
 		ctx.waitUntil(run(env));

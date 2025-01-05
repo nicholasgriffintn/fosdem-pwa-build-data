@@ -145,6 +145,26 @@ const getType = (event) => {
   return type;
 };
 
+const getAttachments = (attachments) => {
+  if (!attachments?.attachment) {
+    return [];
+  }
+
+  if (Array.isArray(attachments.attachment)) {
+    return attachments.attachment.map((attachment) => ({
+      type: attachment._attributes.type,
+      href: attachment._attributes.href,
+      title: attachment._text,
+    }));
+  }
+
+  return [{
+    type: attachments.attachment._attributes.type,
+    href: attachments.attachment._attributes.href,
+    title: attachments.attachment._text,
+  }];
+};
+
 const buildEvent = (event, isLive, roomName, day) => {
   if (!event) {
     return null;
@@ -171,6 +191,7 @@ const buildEvent = (event, isLive, roomName, day) => {
 
   const persons = getPersons(event.persons);
   const links = getLinks(event.links);
+  const attachments = getAttachments(event.attachments);
 
   const streams = [];
   const isLiveRoom =
@@ -200,9 +221,13 @@ const buildEvent = (event, isLive, roomName, day) => {
     title,
     persons,
     links,
+    attachments,
     streams,
     chat,
     room: roomName,
+    url: event.url?._text,
+    language: event.language?._text,
+    feedbackUrl: event.feedback_url?._text,
     id: event._attributes.id,
     startTime: getText(event.start),
     duration: getText(event.duration),
@@ -236,8 +261,23 @@ export async function buildData({ year }: { year: string }) {
       id: type,
       name: typeData[type].name,
       trackCount: 0,
+      eventCount: 0,
+      roomCount: 0,
+      buildingCount: 0,
+      rooms: new Set(),
+      buildings: new Set()
     };
   }
+
+  const buildingStats = Object.keys(buildings).reduce((acc, key) => {
+    acc[key] = {
+      ...buildings[key],
+      roomCount: 0,
+      trackCount: 0,
+      eventCount: 0
+    };
+    return acc;
+  }, {});
 
   for (const day of data.day) {
     const index = day._attributes.index;
@@ -251,22 +291,31 @@ export async function buildData({ year }: { year: string }) {
       end,
       id: index,
       name: `Day ${index}`,
+      eventCount: 0,
+      trackCount: 0,
+      roomCount: 0,
+      buildingCount: 0,
+      rooms: new Set(),
+      buildings: new Set(),
+      tracks: new Set()
     };
 
     for (const room of day.room) {
       const roomName = getRoomName(room._attributes.name);
       const slug = room._attributes.slug || room._attributes.name;
       const roomKey = slug.substring(0, 1).toUpperCase();
-
       const building = buildings[roomKey];
 
-      const roomData = rooms[slug];
-      if (!roomData) {
+      if (!rooms[slug]) {
         rooms[slug] = {
           name: roomName,
           slug,
           building,
+          eventCount: 0
         };
+        if (buildingStats[roomKey]) {
+          buildingStats[roomKey].roomCount += 1;
+        }
       }
 
       const roomEvents = Array.isArray(room.event) ? room.event : [room.event];
@@ -276,6 +325,12 @@ export async function buildData({ year }: { year: string }) {
 
         if (!eventData) {
           continue;
+        }
+
+        rooms[slug].eventCount += 1;
+        
+        if (buildingStats[roomKey]) {
+          buildingStats[roomKey].eventCount += 1;
         }
 
         const type = eventData.type;
@@ -294,6 +349,10 @@ export async function buildData({ year }: { year: string }) {
             eventCount: 0,
           };
 
+          if (buildingStats[roomKey]) {
+            buildingStats[roomKey].trackCount += 1;
+          }
+
           types[type].trackCount += 1;
         }
 
@@ -303,23 +362,60 @@ export async function buildData({ year }: { year: string }) {
 
         events[eventData.id] = eventData;
         tracks[trackKey].eventCount += 1;
+
+        if (types[type]) {
+          types[type].eventCount++;
+          types[type].rooms.add(roomName);
+          types[type].roomCount = types[type].rooms.size;
+          types[type].buildings.add(roomKey);
+          types[type].buildingCount = types[type].buildings.size;
+        }
+
+        days[index].eventCount++;
+        days[index].rooms.add(roomName);
+        days[index].buildings.add(roomKey);
+        days[index].tracks.add(trackKey);
+        days[index].roomCount = days[index].rooms.size;
+        days[index].buildingCount = days[index].buildings.size;
+        days[index].trackCount = days[index].tracks.size;
       }
     }
   }
 
-  const conference = data.conference as {
-    _attributes: { start: string; end: string };
+  const conference = {
+    acronym: data.conference.acronym._text,
+    title: data.conference.title._text,
+    subtitle: data.conference.subtitle._text,
+    venue: data.conference.venue._text,
+    city: data.conference.city._text,
+    start: data.conference.start._text,
+    end: data.conference.end._text,
+    days: data.day.map((day) => day._attributes.date),
+    day_change: data.conference.day_change._text,
+    timeslot_duration: data.conference.timeslot_duration._text,
+    time_zone_name: data.conference.time_zone_name._text,
   };
 
   const result = {
     conference,
     types,
-    buildings,
+    buildings: buildingStats,
     days,
     rooms,
     tracks,
     events,
   };
+
+  Object.values(types).forEach(type => {
+    delete type.rooms;
+    delete type.buildings;
+  });
+
+  Object.values(days).forEach(day => {
+    delete day.rooms;
+    delete day.buildings;
+    delete day.tracks;
+  });
 
   return result;
 }
