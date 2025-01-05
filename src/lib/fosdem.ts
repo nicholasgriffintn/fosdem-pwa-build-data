@@ -383,17 +383,17 @@ export async function buildData({ year }: { year: string }) {
   }
 
   const conference = {
-    acronym: data.conference.acronym._text,
-    title: data.conference.title._text,
-    subtitle: data.conference.subtitle._text,
-    venue: data.conference.venue._text,
-    city: data.conference.city._text,
-    start: data.conference.start._text,
-    end: data.conference.end._text,
+    acronym: data.conference.acronym?._text,
+    title: data.conference.title?._text,
+    subtitle: data.conference.subtitle?._text,
+    venue: data.conference.venue?._text,
+    city: data.conference.city?._text,
+    start: data.conference.start?._text,
+    end: data.conference.end?._text,
     days: data.day.map((day) => day._attributes.date),
-    day_change: data.conference.day_change._text,
-    timeslot_duration: data.conference.timeslot_duration._text,
-    time_zone_name: data.conference.time_zone_name._text,
+    day_change: data.conference.day_change?._text,
+    timeslot_duration: data.conference.timeslot_duration?._text,
+    time_zone_name: data.conference.time_zone_name?._text,
   };
 
   const result = {
