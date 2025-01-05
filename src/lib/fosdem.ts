@@ -213,7 +213,7 @@ function flattenConference(conference: any): Conference {
     city: conference.city?._text,
     start: conference.start?._text,
     end: conference.end?._text,
-    days: [conference.days?._text],
+    days: [conference.start?._text, conference.end?._text].filter(Boolean),
     day_change: conference.day_change?._text,
     timeslot_duration: conference.timeslot_duration?._text,
     time_zone_name: conference.time_zone_name?._text
