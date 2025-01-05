@@ -2,6 +2,163 @@ import { xml2json } from 'xml-js';
 
 import { constants } from '../constants';
 
+// Base interfaces for XML parsing
+interface XmlAttribute {
+  _attributes: Record<string, string>;
+  _text?: string;
+}
+
+interface XmlEvent extends XmlAttribute {
+  _attributes: {
+    guid: string;
+    id: string;
+  };
+  title: { _text: string };
+  type: { _text: string };
+  track: { _text: string };
+  persons?: { person: Array<{ _text: string }> | { _text: string } };
+  links?: { link: Array<XmlLink> | XmlLink };
+  attachments?: { attachment: Array<XmlAttachment> | XmlAttachment };
+  url?: { _text: string };
+  language?: { _text: string };
+  feedback_url?: { _text: string };
+  start: { _text: string };
+  duration: { _text: string };
+  subtitle?: { _text: string };
+  abstract?: { _text: string };
+  description?: { _text: string };
+}
+
+interface XmlLink extends XmlAttribute {
+  _attributes: {
+    href: string;
+  };
+}
+
+interface XmlAttachment extends XmlLink {
+  _attributes: {
+    href: string;
+    type: string;
+  };
+}
+
+// Processed data interfaces
+interface Conference {
+  acronym?: string;
+  title?: string;
+  subtitle?: string;
+  venue?: string;
+  city?: string;
+  start?: string;
+  end?: string;
+  days: string[];
+  day_change?: string;
+  timeslot_duration?: string;
+  time_zone_name?: string;
+}
+
+interface BuildingStats {
+  name: string;
+  roomCount: number;
+  trackCount: number;
+  eventCount: number;
+}
+
+interface ProcessedEvent {
+  day: number;
+  isLive: boolean;
+  status: 'canceled' | 'amendment' | 'running' | 'unknown';
+  type: string;
+  track: string;
+  trackKey: string;
+  title: string;
+  persons: string[];
+  links: Link[];
+  attachments: Attachment[];
+  streams: Stream[];
+  chat: string | null;
+  room: string;
+  url?: string;
+  language?: string;
+  feedbackUrl?: string;
+  id: string;
+  startTime: string;
+  duration: string;
+  subtitle?: string;
+  abstract?: string;
+  description?: string;
+}
+
+interface Link {
+  href: string;
+  title: string;
+  type: string | null;
+}
+
+interface Attachment {
+  type: string;
+  href: string;
+  title: string;
+}
+
+interface Stream {
+  href: string;
+  title: string;
+  type: string;
+}
+
+interface BuildDataResult {
+  conference: Conference;
+  types: Record<string, TypeInfo>;
+  buildings: Record<string, BuildingStats>;
+  days: Record<string, DayInfo>;
+  rooms: Record<string, RoomInfo>;
+  tracks: Record<string, TrackInfo>;
+  events: Record<string, ProcessedEvent>;
+}
+
+interface TypeInfo {
+  id: string;
+  name: string;
+  trackCount: number;
+  eventCount: number;
+  roomCount: number;
+  buildingCount: number;
+  rooms: Set<string>;
+  buildings: Set<string>;
+}
+
+interface DayInfo {
+  date: string;
+  start: string;
+  end: string;
+  id: number;
+  name: string;
+  eventCount: number;
+  trackCount: number;
+  roomCount: number;
+  buildingCount: number;
+  rooms: Set<string>;
+  buildings: Set<string>;
+  tracks: Set<string>;
+}
+
+interface RoomInfo {
+  name: string;
+  slug: string;
+  building: string;
+  eventCount: number;
+}
+
+interface TrackInfo {
+  id: string;
+  name: string;
+  type: string;
+  room: string;
+  day: number[];
+  eventCount: number;
+}
+
 type RoomEvent = {
   _attributes: {
     guid: string;
@@ -19,13 +176,12 @@ type Day = {
   room: Room[];
 };
 
-const typeData = constants.TYPES;
+const typeData = Object.freeze(constants.TYPES);
+const buildings = Object.freeze(constants.BUILDINGS);
 
-const buildings = constants.BUILDINGS;
-
-function flattenData(element: unknown) {
+function flattenData<T>(element: unknown): T {
   if (Array.isArray(element)) {
-    return element.map(flattenData);
+    return element.map(flattenData) as T;
   }
 
   if (typeof element === 'object' && element !== null) {
@@ -34,21 +190,42 @@ function flattenData(element: unknown) {
     if (keys.length === 1) {
       const key = keys[0];
       if (key === 'value') {
-        return element[key];
+        return (element as Record<string, T>)[key];
       }
     }
 
-    const newElement = {};
-    keys.forEach((e) => {
-      newElement[e] = flattenData(element[e]);
-    });
+    const newElement = {} as T;
+    for (const e of keys) {
+      (newElement as Record<string, unknown>)[e] = flattenData((element as Record<string, unknown>)[e]);
+    }
     return newElement;
   }
 
-  return element;
+  return element as T;
 }
 
-async function parseData(text: string) {
+function flattenConference(conference: any): Conference {
+  const result: Conference = {
+    acronym: conference.acronym?._text,
+    title: conference.title?._text,
+    subtitle: conference.subtitle?._text,
+    venue: conference.venue?._text,
+    city: conference.city?._text,
+    start: conference.start?._text,
+    end: conference.end?._text,
+    days: [conference.days?._text],
+    day_change: conference.day_change?._text,
+    timeslot_duration: conference.timeslot_duration?._text,
+    time_zone_name: conference.time_zone_name?._text
+  };
+
+  return result;
+}
+
+async function parseData(text: string): Promise<{
+  conference: Conference;
+  day: Day[];
+}> {
   const data = await xml2json(text, {
     compact: true,
     ignoreDeclaration: true,
@@ -60,206 +237,174 @@ async function parseData(text: string) {
   });
 
   const parsed = JSON.parse(data);
-  const result = flattenData(parsed.schedule);
-
-  return result;
-}
-
-const getRoomName = (name) => {
-  if (name.startsWith('D.')) {
-    return `${name} (online)`;
-  }
-
-  return name;
-};
-
-const getPersons = (persons) => {
-  if (!persons.person) {
-    return [];
-  }
-
-  if (Array.isArray(persons.person)) {
-    return persons.person.map((person) => person._text);
-  }
-
-  return [persons.person._text];
-};
-
-const getLinkType = (url) => {
-  if (url.endsWith('.mp4')) {
-    return 'video/mp4';
-  } else if (url.endsWith('.webm')) {
-    return 'video/webm';
-  } else {
-    return null;
-  }
-};
-
-const getLinks = (links) => {
-  if (!links.link) {
-    return [];
-  }
-
-  if (Array.isArray(links.link)) {
-    return links.link.map((link) => ({
-      href: link._attributes.href,
-      title: link._text,
-      type: getLinkType(link._attributes.href),
-    }));
-  }
-
-  return [
-    {
-      href: links.link._attributes.href,
-      title: links.link._text,
-      type: getLinkType(links.link._attributes.href),
-    },
-  ];
-};
-
-const getText = (element) =>
-  element && element?._text !== null ? element._text : element;
-
-const getStatus = (title) => {
-  if (title.includes('canceled')) {
-    return 'canceled';
-  } else if (title.includes('amendment')) {
-    return 'amendment';
-  } else {
-    return 'running';
-  }
-};
-
-const getTitle = (title, status) => {
-  if (status === 'amendment') {
-    return title?.substring(10) || title;
-  }
-  return title;
-};
-
-const getType = (event) => {
-  const type = getText(event.type);
-  if (!typeData[type]) {
-    return 'other';
-  }
-  return type;
-};
-
-const getAttachments = (attachments) => {
-  if (!attachments?.attachment) {
-    return [];
-  }
-
-  if (Array.isArray(attachments.attachment)) {
-    return attachments.attachment.map((attachment) => ({
-      type: attachment._attributes.type,
-      href: attachment._attributes.href,
-      title: attachment._text,
-    }));
-  }
-
-  return [{
-    type: attachments.attachment._attributes.type,
-    href: attachments.attachment._attributes.href,
-    title: attachments.attachment._text,
-  }];
-};
-
-const buildEvent = (event, isLive, roomName, day) => {
-  if (!event) {
-    return null;
-  }
-
-  const originalTitle = getText(event.title);
-  const status = originalTitle
-    ? getStatus(originalTitle.toLowerCase())
-    : 'unknown';
-
-  if (status === 'canceled') {
-    return null;
-  }
-
-  const type = getType(event);
-  const track = getText(event.track);
-  const trackKey = track.toLowerCase().replace(/\s/g, '');
-
-  if (type === 'other' && track === 'stand') {
-    return null;
-  }
-
-  const title = getTitle(originalTitle, status);
-
-  const persons = getPersons(event.persons);
-  const links = getLinks(event.links);
-  const attachments = getAttachments(event.attachments);
-
-  const streams = [];
-  const isLiveRoom =
-    !roomName.startsWith('B.') &&
-    !roomName.startsWith('I.') &&
-    !roomName.startsWith('S.');
-  const normalizedRoom = roomName.toLowerCase().replace(/\./g, '');
-  if (isLiveRoom) {
-    streams.push({
-      href: constants.STREAM_LINK.replace('${ROOM_ID}', normalizedRoom),
-      title: 'Stream',
-      type: 'application/vnd.apple.mpegurl',
-    });
-  }
-
-  const chat = /^[A-Z]\./.test(roomName)
-    ? constants.CHAT_LINK.replace('${ROOM_ID}', roomName.substring(2))
-    : null;
+  const result = flattenData<{ conference: any; day: Day[] }>(parsed.schedule);
 
   return {
-    day,
-    isLive,
-    status,
-    type,
-    track,
-    trackKey,
-    title,
-    persons,
-    links,
-    attachments,
-    streams,
-    chat,
-    room: roomName,
-    url: event.url?._text,
-    language: event.language?._text,
-    feedbackUrl: event.feedback_url?._text,
-    id: event._attributes.id,
-    startTime: getText(event.start),
-    duration: getText(event.duration),
-    subtitle: getText(event.subtitle),
-    abstract: getText(event.abstract),
-    description: getText(event.description),
+    conference: flattenConference(result.conference),
+    day: result.day
+  };
+}
+
+const memoize = <T, R>(fn: (arg: T) => R) => {
+  const cache = new Map<T, R>();
+  return (arg: T): R => {
+    const value = cache.get(arg) ?? fn(arg);
+    cache.set(arg, value);
+    return value;
   };
 };
 
-export async function buildData({ year }: { year: string }) {
-  const url = constants.SCHEDULE_LINK.replace('${YEAR}', year);
-  const response = await fetch(url);
-  const text = await response.text();
-  const data = await parseData(text);
+const getRoomName = memoize((name: string) => 
+  name.startsWith('D.') ? `${name} (online)` : name
+);
 
-  const conferenceDates = data.day.map((day: Day) => day._attributes.date);
-  const isLive = conferenceDates.includes(
-    new Date().toISOString().substring(0, 10)
-  );
+const getLinkType = memoize((url: string) => {
+  if (url.endsWith('.mp4')) return 'video/mp4';
+  if (url.endsWith('.webm')) return 'video/webm';
+  return null;
+});
 
-  const types = {};
-  const days = {};
-  const rooms = {};
-  const events = {};
-  const tracks = {};
+const getStatus = memoize((title: string): ProcessedEvent['status'] => {
+  const lowerTitle = title.toLowerCase();
+  if (lowerTitle.includes('canceled')) return 'canceled';
+  if (lowerTitle.includes('amendment')) return 'amendment';
+  return 'running';
+});
 
-  const typeKeys = Object.keys(typeData);
+class EventProcessor {
+  private getType(event: XmlEvent): string {
+    const type = event.type._text;
+    return type in typeData ? type : 'other';
+  }
 
-  for (const type of typeKeys) {
-    types[type] = {
+  private processPersons(persons: XmlEvent['persons']): string[] {
+    if (!persons?.person) return [];
+    return Array.isArray(persons.person)
+      ? persons.person.map(person => person._text)
+      : [persons.person._text];
+  }
+
+  private processLinks(links: XmlEvent['links']): Link[] {
+    if (!links?.link) return [];
+    const processLink = (link: XmlLink) => ({
+      href: link._attributes.href,
+      title: link._text || '',
+      type: getLinkType(link._attributes.href)
+    });
+
+    return Array.isArray(links.link)
+      ? links.link.map(processLink)
+      : [processLink(links.link)];
+  }
+
+  private processAttachments(attachments: XmlEvent['attachments']): Attachment[] {
+    if (!attachments?.attachment) return [];
+    const processAttachment = (attachment: XmlAttachment): Attachment => ({
+      type: attachment._attributes.type,
+      href: attachment._attributes.href,
+      title: attachment._text || ''
+    });
+
+    return Array.isArray(attachments.attachment)
+      ? attachments.attachment.map(processAttachment)
+      : [processAttachment(attachments.attachment)];
+  }
+
+  private buildStreamInfo(roomName: string): Stream[] {
+    const isLiveRoom = !['B.', 'I.', 'S.'].some(prefix => 
+      roomName.startsWith(prefix)
+    );
+    
+    if (!isLiveRoom) return [];
+
+    const normalizedRoom = roomName.toLowerCase().replace(/\./g, '');
+    return [{
+      href: constants.STREAM_LINK.replace('${ROOM_ID}', normalizedRoom),
+      title: 'Stream',
+      type: 'application/vnd.apple.mpegurl'
+    }];
+  }
+
+  private buildChatInfo(roomName: string): string | null {
+    return /^[A-Z]\./.test(roomName)
+      ? constants.CHAT_LINK.replace('${ROOM_ID}', roomName.substring(2))
+      : null;
+  }
+
+  private getTitle(title: string, status: ProcessedEvent['status']): string {
+    return status === 'amendment' ? title?.substring(10) || title : title;
+  }
+
+  public processEvent(
+    event: XmlEvent, 
+    isLive: boolean, 
+    roomName: string, 
+    day: number
+  ): ProcessedEvent | null {
+    if (!event?.title?._text) return null;
+    
+    const title = event.title._text;
+    const status = getStatus(title.toLowerCase());
+
+    if (status === 'canceled') return null;
+
+    if (!event?.type?._text || !event?.track?._text) return null;
+
+    const type = this.getType(event);
+    const track = event.track._text;
+    const trackKey = track.toLowerCase().replace(/\s/g, '');
+
+    if (type === 'other' && track === 'stand') return null;
+
+    return {
+      day,
+      isLive,
+      status,
+      type,
+      track,
+      trackKey,
+      title: this.getTitle(title, status),
+      persons: this.processPersons(event.persons),
+      links: this.processLinks(event.links),
+      attachments: this.processAttachments(event.attachments),
+      streams: this.buildStreamInfo(roomName),
+      chat: this.buildChatInfo(roomName),
+      room: roomName,
+      url: event.url?._text,
+      language: event.language?._text,
+      feedbackUrl: event.feedback_url?._text,
+      id: event._attributes.id,
+      startTime: event.start._text,
+      duration: event.duration._text,
+      subtitle: event.subtitle?._text,
+      abstract: event.abstract?._text,
+      description: event.description?._text
+    };
+  }
+}
+
+async function processScheduleData(
+  data: {
+    conference: Conference;
+    day: Day[];
+  },
+  processor: EventProcessor
+): Promise<BuildDataResult> {
+  const result: BuildDataResult = {
+    conference: data.conference,
+    types: {},
+    buildings: {},
+    days: {},
+    rooms: {},
+    tracks: {},
+    events: {}
+  };
+
+  // Initialize types from constants
+  for (const type of Object.keys(typeData)) {
+    result.types[type] = {
       id: type,
-      name: typeData[type].name,
+      name: typeData[type as keyof typeof typeData].name,
       trackCount: 0,
       eventCount: 0,
       roomCount: 0,
@@ -269,28 +414,25 @@ export async function buildData({ year }: { year: string }) {
     };
   }
 
-  const buildingStats = Object.keys(buildings).reduce((acc, key) => {
-    acc[key] = {
-      ...buildings[key],
+  // Initialize buildings
+  for (const building of Object.keys(buildings)) {
+    result.buildings[building] = {
+      name: building,
       roomCount: 0,
       trackCount: 0,
       eventCount: 0
     };
-    return acc;
-  }, {});
+  }
 
+  // Process each day
   for (const day of data.day) {
-    const index = day._attributes.index;
-    const date = day._attributes.date;
-    const start = day._attributes.start;
-    const end = day._attributes.end;
-
-    days[index] = {
-      date,
-      start,
-      end,
-      id: index,
-      name: `Day ${index}`,
+    const dayIndex = day._attributes.index;
+    const dayInfo: DayInfo = {
+      date: day._attributes.date,
+      start: day._attributes.start,
+      end: day._attributes.end,
+      id: dayIndex,
+      name: `Day ${dayIndex}`,
       eventCount: 0,
       trackCount: 0,
       roomCount: 0,
@@ -300,122 +442,131 @@ export async function buildData({ year }: { year: string }) {
       tracks: new Set()
     };
 
+    // Process rooms in each day
     for (const room of day.room) {
       const roomName = getRoomName(room._attributes.name);
-      const slug = room._attributes.slug || room._attributes.name;
-      const roomKey = slug.substring(0, 1).toUpperCase();
-      const building = buildings[roomKey];
+      const building = roomName.split('.')[0];
 
-      if (!rooms[slug]) {
-        rooms[slug] = {
+      if (!result.rooms[roomName]) {
+        result.rooms[roomName] = {
           name: roomName,
-          slug,
+          slug: room._attributes.slug,
           building,
           eventCount: 0
         };
-        if (buildingStats[roomKey]) {
-          buildingStats[roomKey].roomCount += 1;
-        }
       }
 
-      const roomEvents = Array.isArray(room.event) ? room.event : [room.event];
+      // Process events in each room
+      const events = Array.isArray(room.event) ? room.event : [room.event];
+      for (const xmlEvent of events) {
+        const event = processor.processEvent(
+          xmlEvent as XmlEvent,
+          dayIndex === 1,
+          roomName,
+          dayIndex
+        );
 
-      for (const event of roomEvents) {
-        const eventData = buildEvent(event, isLive, roomName, index);
+        if (event) {
+          result.events[event.id] = event;
+          result.rooms[roomName].eventCount++;
+          dayInfo.eventCount++;
 
-        if (!eventData) {
-          continue;
-        }
+          // Update track info
+          if (!result.tracks[event.trackKey]) {
+            result.tracks[event.trackKey] = {
+              id: event.trackKey,
+              name: event.track,
+              type: event.type,
+              room: roomName,
+              day: [dayIndex],
+              eventCount: 0
+            };
+          } else {
+            if (!result.tracks[event.trackKey].day.includes(dayIndex)) {
+              result.tracks[event.trackKey].day.push(dayIndex);
+            }
+          }
+          result.tracks[event.trackKey].eventCount++;
 
-        rooms[slug].eventCount += 1;
-        
-        if (buildingStats[roomKey]) {
-          buildingStats[roomKey].eventCount += 1;
-        }
-
-        const type = eventData.type;
-        if (!types[type]) {
-          console.error(`Unknown type: ${type}`);
-        }
-
-        const trackKey = eventData.trackKey;
-        if (!tracks[trackKey]) {
-          tracks[trackKey] = {
-            id: trackKey,
-            name: eventData.track,
-            type,
-            room: roomName,
-            day: [],
-            eventCount: 0,
-          };
-
-          if (buildingStats[roomKey]) {
-            buildingStats[roomKey].trackCount += 1;
+          // Update type stats
+          if (result.types[event.type]) {
+            result.types[event.type].eventCount++;
+            result.types[event.type].rooms.add(roomName);
+            result.types[event.type].buildings.add(building);
           }
 
-          types[type].trackCount += 1;
+          // Update day stats
+          dayInfo.rooms.add(roomName);
+          dayInfo.buildings.add(building);
+          dayInfo.tracks.add(event.trackKey);
         }
-
-        if (!tracks[trackKey].day.includes(index)) {
-          tracks[trackKey].day.push(index);
-        }
-
-        events[eventData.id] = eventData;
-        tracks[trackKey].eventCount += 1;
-
-        if (types[type]) {
-          types[type].eventCount++;
-          types[type].rooms.add(roomName);
-          types[type].roomCount = types[type].rooms.size;
-          types[type].buildings.add(roomKey);
-          types[type].buildingCount = types[type].buildings.size;
-        }
-
-        days[index].eventCount++;
-        days[index].rooms.add(roomName);
-        days[index].buildings.add(roomKey);
-        days[index].tracks.add(trackKey);
-        days[index].roomCount = days[index].rooms.size;
-        days[index].buildingCount = days[index].buildings.size;
-        days[index].trackCount = days[index].tracks.size;
       }
+
+      // Update building stats
+      if (result.buildings[building]) {
+        result.buildings[building].roomCount++;
+        result.buildings[building].eventCount += result.rooms[roomName].eventCount;
+      }
+    }
+
+    // Update final day stats
+    dayInfo.roomCount = dayInfo.rooms.size;
+    dayInfo.buildingCount = dayInfo.buildings.size;
+    dayInfo.trackCount = dayInfo.tracks.size;
+    result.days[dayIndex] = dayInfo;
+
+    // Update type stats
+    for (const type of Object.values(result.types)) {
+      type.roomCount = type.rooms.size;
+      type.buildingCount = type.buildings.size;
+      type.trackCount = Object.values(result.tracks)
+        .filter(track => track.type === type.id)
+        .length;
     }
   }
 
-  const conference = {
-    acronym: data.conference.acronym?._text,
-    title: data.conference.title?._text,
-    subtitle: data.conference.subtitle?._text,
-    venue: data.conference.venue?._text,
-    city: data.conference.city?._text,
-    start: data.conference.start?._text,
-    end: data.conference.end?._text,
-    days: data.day.map((day) => day._attributes.date),
-    day_change: data.conference.day_change?._text,
-    timeslot_duration: data.conference.timeslot_duration?._text,
-    time_zone_name: data.conference.time_zone_name?._text,
-  };
+  // Clean up before returning
+  for (const type of Object.values(result.types)) {
+    // biome-ignore lint/performance/noDelete: <explanation>
+    delete (type as any).rooms;
+    // biome-ignore lint/performance/noDelete: <explanation>
+    delete (type as any).buildings;
+  }
 
-  const result = {
-    conference,
-    types,
-    buildings: buildingStats,
-    days,
-    rooms,
-    tracks,
-    events,
-  };
-
-  Object.values(types).forEach(type => {
-    delete type.rooms;
-    delete type.buildings;
-  });
-
-  Object.values(days).forEach(day => {
-    delete day.rooms;
-    delete day.buildings;
-    delete day.tracks;
-  });
+  for (const day of Object.values(result.days)) {
+    // biome-ignore lint/performance/noDelete: <explanation>
+    delete (day as any).rooms;
+    // biome-ignore lint/performance/noDelete: <explanation>
+    delete (day as any).buildings;
+    // biome-ignore lint/performance/noDelete: <explanation>
+    delete (day as any).tracks;
+  }
 
   return result;
+}
+
+export async function buildData({ year }: { year: string }): Promise<BuildDataResult> {
+  if (!year || !/^\d{4}$/.test(year)) {
+    throw new Error('Invalid year format. Expected YYYY');
+  }
+
+  try {
+    const url = constants.SCHEDULE_LINK.replace('${YEAR}', year);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch schedule: ${response.statusText}`);
+    }
+    
+    const text = await response.text();
+    const data = await parseData(text);
+
+    const processor = new EventProcessor();
+    const result = await processScheduleData(data, processor);
+
+    return result;
+  } catch (error) {
+    console.error('Error building data:', error);
+    throw error;
+  }
 }
