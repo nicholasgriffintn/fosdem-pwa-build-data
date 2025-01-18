@@ -276,6 +276,14 @@ const getStatus = memoize((title: string): ProcessedEvent['status'] => {
 class EventProcessor {
   private getType(event: XmlEvent): string {
     const type = event.type._text;
+    if (type === 'lightning') {
+      return 'lightningtalk';
+    }
+
+    if (type === 'lecture') {
+      return 'keynote';
+    }
+
     return type in typeData ? type : 'other';
   }
 
