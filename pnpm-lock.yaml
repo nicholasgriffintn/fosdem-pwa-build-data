@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@sentry/cloudflare':
+        specifier: ^8.52.1
+        version: 8.52.1
       xml-js:
         specifier: ^1.6.11
         version: 1.6.11
@@ -500,6 +503,14 @@ packages:
     resolution: {integrity: sha512-ZvK2jBafvttJjoIdKm/Q/Bh7IJ1Ose9IBOwpOXcOvW3ikGTQGmKDgxTC6oCAzW6PynbkKP8+um1du81XJHZ0JA==}
     cpu: [x64]
     os: [win32]
+
+  '@sentry/cloudflare@8.52.1':
+    resolution: {integrity: sha512-3ACprKFrMFLwsTjTr1M1TvZFQjYdOwTalqFMnQUNqNCkjFUz3NtiqY+/eDYlgEjNnSa/hxTWgATMMsau9fbTeg==}
+    engines: {node: '>=14.18'}
+
+  '@sentry/core@8.52.1':
+    resolution: {integrity: sha512-FG0P9I03xk4jBI4O7NBkw8uqLGH9/RWOSFoRH3eYvUTyBLhkk9IaCFbAAGBNZhojky8T7gqYwnuRbFNlrAiuSA==}
+    engines: {node: '>=14.18'}
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
@@ -1258,6 +1269,14 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.28.1':
     optional: true
+
+  '@sentry/cloudflare@8.52.1':
+    dependencies:
+      '@sentry/core': 8.52.1
+    optionalDependencies:
+      '@cloudflare/workers-types': 4.20241224.0
+
+  '@sentry/core@8.52.1': {}
 
   '@types/estree@1.0.6': {}
 
