@@ -17,10 +17,10 @@ importers:
     devDependencies:
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.5.36
-        version: 0.5.36(@cloudflare/workers-types@4.20241224.0)(@vitest/runner@3.0.2)(@vitest/snapshot@3.0.2)(vitest@3.0.2(@types/node@22.10.2))
+        version: 0.5.36(@cloudflare/workers-types@4.20250313.0)(@vitest/runner@3.0.2)(@vitest/snapshot@3.0.2)(vitest@3.0.2(@types/node@22.10.2))
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0
-        version: 4.20241224.0
+        version: 4.20250313.0
       typescript:
         specifier: ^5.7.2
         version: 5.8.2
@@ -29,7 +29,7 @@ importers:
         version: 3.0.2(@types/node@22.10.2)
       wrangler:
         specifier: ^3.95.0
-        version: 3.103.2(@cloudflare/workers-types@4.20241224.0)
+        version: 3.103.2(@cloudflare/workers-types@4.20250313.0)
 
 packages:
 
@@ -108,8 +108,8 @@ packages:
     resolution: {integrity: sha512-A+lQ8xp7992qSeMmuQ0ssL6CPmm+ZmAv6Ddikan0n1jjpMAic+97l7xtVIsswSn9iLMFPYQ9uNN/8Fl0AgARIQ==}
     engines: {node: '>=16.7.0'}
 
-  '@cloudflare/workers-types@4.20241224.0':
-    resolution: {integrity: sha512-1ZmFc8qqM7S/HUGmLplc4P8n8DoMqiJmc47r9Lr7VbuaotoqCXVljz09w1V1mc4K3pbFPgvqSy4XYStZ08HrlQ==}
+  '@cloudflare/workers-types@4.20250313.0':
+    resolution: {integrity: sha512-iqyzZwogC+3yL8h58vMhjYQUHUZA8XazE3Q+ofR59wDOnsPe/u9W6+aCl408N0iNBhMPvpJQQ3/lkz0iJN2fhA==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -1005,7 +1005,7 @@ snapshots:
     dependencies:
       mime: 3.0.0
 
-  '@cloudflare/vitest-pool-workers@0.5.36(@cloudflare/workers-types@4.20241224.0)(@vitest/runner@3.0.2)(@vitest/snapshot@3.0.2)(vitest@3.0.2(@types/node@22.10.2))':
+  '@cloudflare/vitest-pool-workers@0.5.36(@cloudflare/workers-types@4.20250313.0)(@vitest/runner@3.0.2)(@vitest/snapshot@3.0.2)(vitest@3.0.2(@types/node@22.10.2))':
     dependencies:
       '@vitest/runner': 3.0.2
       '@vitest/snapshot': 3.0.2
@@ -1016,7 +1016,7 @@ snapshots:
       miniflare: 3.20241205.0
       semver: 7.6.3
       vitest: 3.0.2(@types/node@22.10.2)
-      wrangler: 3.95.0(@cloudflare/workers-types@4.20241224.0)
+      wrangler: 3.95.0(@cloudflare/workers-types@4.20250313.0)
       zod: 3.24.1
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
@@ -1059,7 +1059,7 @@ snapshots:
       mime: 3.0.0
       zod: 3.24.1
 
-  '@cloudflare/workers-types@4.20241224.0': {}
+  '@cloudflare/workers-types@4.20250313.0': {}
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
@@ -1282,7 +1282,7 @@ snapshots:
     dependencies:
       '@sentry/core': 8.55.0
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20241224.0
+      '@cloudflare/workers-types': 4.20250313.0
 
   '@sentry/core@8.55.0': {}
 
@@ -1780,7 +1780,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20241230.0
       '@cloudflare/workerd-windows-64': 1.20241230.0
 
-  wrangler@3.103.2(@cloudflare/workers-types@4.20241224.0):
+  wrangler@3.103.2(@cloudflare/workers-types@4.20250313.0):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.3.4
       '@esbuild-plugins/node-globals-polyfill': 0.2.3(esbuild@0.17.19)
@@ -1792,14 +1792,14 @@ snapshots:
       unenv: unenv-nightly@2.0.0-20250109-100802-88ad671
       workerd: 1.20241230.0
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20241224.0
+      '@cloudflare/workers-types': 4.20250313.0
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  wrangler@3.95.0(@cloudflare/workers-types@4.20241224.0):
+  wrangler@3.95.0(@cloudflare/workers-types@4.20250313.0):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.3.4
       '@cloudflare/workers-shared': 0.11.0
@@ -1820,7 +1820,7 @@ snapshots:
       workerd: 1.20241205.0
       xxhash-wasm: 1.1.0
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20241224.0
+      '@cloudflare/workers-types': 4.20250313.0
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil
