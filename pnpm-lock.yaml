@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@sentry/cloudflare':
-        specifier: ^8.52.1
-        version: 8.55.0
+        specifier: ^10.0.0
+        version: 10.15.0(@cloudflare/workers-types@4.20250313.0)
       xml-js:
         specifier: ^1.6.11
         version: 1.6.11
@@ -409,6 +409,10 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
+  '@opentelemetry/api@1.9.0':
+    resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
+    engines: {node: '>=8.0.0'}
+
   '@rollup/rollup-android-arm-eabi@4.28.1':
     resolution: {integrity: sha512-2aZp8AES04KI2dy3Ss6/MDjXbwBzj+i0GqKtWXgw2/Ma6E4jJvujryO6gJAghIRVz7Vwr9Gtl/8na3nDUKpraQ==}
     cpu: [arm]
@@ -504,13 +508,18 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@sentry/cloudflare@8.55.0':
-    resolution: {integrity: sha512-ZYrGw2aJQ423mPDx1G5AZo+IGqqUcMTQZe0nKxYN33f/hlJMo+S2NMxTn4XEP0r6uYS9JEB9PjRSq8koo7/ieg==}
-    engines: {node: '>=14.18'}
+  '@sentry/cloudflare@10.15.0':
+    resolution: {integrity: sha512-PHuYbghexMPySF2e20VMQTZKr5VJKuAF3UwmCKUINoRN0BjQnWSdcXJdEVy29ko2yTNu74ehw60vxEtNYvstxA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@cloudflare/workers-types': ^4.x
+    peerDependenciesMeta:
+      '@cloudflare/workers-types':
+        optional: true
 
-  '@sentry/core@8.55.0':
-    resolution: {integrity: sha512-6g7jpbefjHYs821Z+EBJ8r4Z7LT5h80YSWRJaylGS4nW5W5Z2KXzpdnyFarv37O7QjauzVC2E+PABmpkw5/JGA==}
-    engines: {node: '>=14.18'}
+  '@sentry/core@10.15.0':
+    resolution: {integrity: sha512-J7WsQvb9G6nsVgWkTHwyX7wR2djtEACYCx19hAnRbSGIg+ysVG+7Ti3RL4bz9/VXfcxsz346cleKc7ljhynYlQ==}
+    engines: {node: '>=18'}
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
@@ -1224,6 +1233,8 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
+  '@opentelemetry/api@1.9.0': {}
+
   '@rollup/rollup-android-arm-eabi@4.28.1':
     optional: true
 
@@ -1281,13 +1292,14 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.28.1':
     optional: true
 
-  '@sentry/cloudflare@8.55.0':
+  '@sentry/cloudflare@10.15.0(@cloudflare/workers-types@4.20250313.0)':
     dependencies:
-      '@sentry/core': 8.55.0
+      '@opentelemetry/api': 1.9.0
+      '@sentry/core': 10.15.0
     optionalDependencies:
       '@cloudflare/workers-types': 4.20250313.0
 
-  '@sentry/core@8.55.0': {}
+  '@sentry/core@10.15.0': {}
 
   '@types/estree@1.0.6': {}
 
