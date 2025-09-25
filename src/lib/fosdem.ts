@@ -256,7 +256,7 @@ const memoize = <T, R>(fn: (arg: T) => R) => {
   };
 };
 
-const getRoomName = memoize((name: string) => 
+const getRoomName = memoize((name: string) =>
   name.startsWith('D.') ? `${name} (online)` : name
 );
 
@@ -321,10 +321,10 @@ class EventProcessor {
   }
 
   private buildStreamInfo(roomName: string): Stream[] {
-    const isLiveRoom = !['B.', 'I.', 'S.'].some(prefix => 
+    const isLiveRoom = !['B.', 'I.', 'S.'].some(prefix =>
       roomName.startsWith(prefix)
     );
-    
+
     if (!isLiveRoom) return [];
 
     const normalizedRoom = roomName.toLowerCase().replace(/\./g, '');
@@ -346,13 +346,13 @@ class EventProcessor {
   }
 
   public processEvent(
-    event: XmlEvent, 
-    isLive: boolean, 
-    roomName: string, 
+    event: XmlEvent,
+    isLive: boolean,
+    roomName: string,
     day: number
   ): ProcessedEvent | null {
     if (!event?.title?._text) return null;
-    
+
     const title = event.title._text;
     const status = getStatus(title.toLowerCase());
 
@@ -452,75 +452,83 @@ async function processScheduleData(
       tracks: new Set()
     };
 
-    // Process rooms in each day
-    for (const room of day.room) {
-      const roomName = getRoomName(room._attributes.name);
-      const buildingMatch = roomName.match(/^(AW|[A-Z])/);
-      const buildingId = buildingMatch ? buildingMatch[1] : '';
-      const floorMatch = roomName.match(/^[A-Z]+\.?([0-9]+)/);
-      const floor = floorMatch ? floorMatch[1] : null;
+    if (day.room?.length > 0) {
+      // Process rooms in each day
+      for (const room of day.room) {
+        const roomName = getRoomName(room._attributes.name);
+        const buildingMatch = roomName.match(/^(AW|[A-Z])/);
+        const buildingId = buildingMatch ? buildingMatch[1] : "";
+        const floorMatch = roomName.match(/^[A-Z]+\.?([0-9]+)/);
+        const floor = floorMatch ? floorMatch[1] : null;
 
-      if (!result.rooms[roomName]) {
-        result.rooms[roomName] = {
-          name: roomName,
-          slug: room._attributes.slug,
-          buildingId,
-          building: buildingId in buildings ? buildings[buildingId as keyof typeof buildings] : null,
-          floor,
-          eventCount: 0
-        };
-      }
-
-      // Process events in each room
-      const events = Array.isArray(room.event) ? room.event : [room.event];
-      for (const xmlEvent of events) {
-        const event = processor.processEvent(
-          xmlEvent as XmlEvent,
-          dayIndex === 1,
-          roomName,
-          dayIndex
-        );
-
-        if (event) {
-          result.events[event.id] = event;
-          result.rooms[roomName].eventCount++;
-          dayInfo.eventCount++;
-
-          // Update track info
-          if (!result.tracks[event.trackKey]) {
-            result.tracks[event.trackKey] = {
-              id: event.trackKey,
-              name: event.track,
-              type: event.type,
-              room: roomName,
-              day: [dayIndex],
-              eventCount: 0
-            };
-          } else {
-            if (!result.tracks[event.trackKey].day.includes(dayIndex)) {
-              result.tracks[event.trackKey].day.push(dayIndex);
-            }
-          }
-          result.tracks[event.trackKey].eventCount++;
-
-          // Update type stats
-          if (result.types[event.type]) {
-            result.types[event.type].eventCount++;
-            result.types[event.type].rooms.add(roomName);
-            result.types[event.type].buildings.add(buildingId);
-          }
-
-          // Update day stats
-          dayInfo.rooms.add(roomName);
-          dayInfo.buildings.add(buildingId);
-          dayInfo.tracks.add(event.trackKey);
+        if (!result.rooms[roomName]) {
+          result.rooms[roomName] = {
+            name: roomName,
+            slug: room._attributes.slug,
+            buildingId,
+            building:
+              buildingId in buildings
+                ? buildings[buildingId as keyof typeof buildings]
+                : null,
+            floor,
+            eventCount: 0,
+          };
         }
-      }
 
-      // Update building stats
-      if (result.buildings[buildingId]) {
-        result.buildings[buildingId].roomCount++;
-        result.buildings[buildingId].eventCount += result.rooms[roomName].eventCount;
+        // Process events in each room
+        const events = Array.isArray(room.event)
+          ? room.event
+          : [room.event];
+        for (const xmlEvent of events) {
+          const event = processor.processEvent(
+            xmlEvent as XmlEvent,
+            dayIndex === 1,
+            roomName,
+            dayIndex,
+          );
+
+          if (event) {
+            result.events[event.id] = event;
+            result.rooms[roomName].eventCount++;
+            dayInfo.eventCount++;
+
+            // Update track info
+            if (!result.tracks[event.trackKey]) {
+              result.tracks[event.trackKey] = {
+                id: event.trackKey,
+                name: event.track,
+                type: event.type,
+                room: roomName,
+                day: [dayIndex],
+                eventCount: 0,
+              };
+            } else {
+              if (!result.tracks[event.trackKey].day.includes(dayIndex)) {
+                result.tracks[event.trackKey].day.push(dayIndex);
+              }
+            }
+            result.tracks[event.trackKey].eventCount++;
+
+            // Update type stats
+            if (result.types[event.type]) {
+              result.types[event.type].eventCount++;
+              result.types[event.type].rooms.add(roomName);
+              result.types[event.type].buildings.add(buildingId);
+            }
+
+            // Update day stats
+            dayInfo.rooms.add(roomName);
+            dayInfo.buildings.add(buildingId);
+            dayInfo.tracks.add(event.trackKey);
+          }
+        }
+
+        // Update building stats
+        if (result.buildings[buildingId]) {
+          result.buildings[buildingId].roomCount++;
+          result.buildings[buildingId].eventCount +=
+            result.rooms[roomName].eventCount;
+        }
       }
     }
 
@@ -530,31 +538,39 @@ async function processScheduleData(
     dayInfo.trackCount = dayInfo.tracks.size;
     result.days[dayIndex] = dayInfo;
 
-    // Update type stats
-    for (const type of Object.values(result.types)) {
-      type.roomCount = type.rooms.size;
-      type.buildingCount = type.buildings.size;
-      type.trackCount = Object.values(result.tracks)
-        .filter(track => track.type === type.id)
-        .length;
+    if (Object.keys(result.types)?.length > 0) {
+      // Update type stats
+      for (const type of Object.values(result.types)) {
+        type.roomCount = type.rooms.size;
+        type.buildingCount = type.buildings.size;
+        if (Object.keys(result.tracks)?.length > 0) {
+          type.trackCount = Object.values(result.tracks).filter(
+            (track) => track.type === type.id,
+          ).length;
+        }
+      }
     }
   }
 
-  // Clean up before returning
-  for (const type of Object.values(result.types)) {
-    // biome-ignore lint/performance/noDelete: <explanation>
-    delete (type as any).rooms;
-    // biome-ignore lint/performance/noDelete: <explanation>
-    delete (type as any).buildings;
+  if (Object.keys(result.types).length > 0) {
+    // Clean up before returning
+    for (const type of Object.values(result.types)) {
+      // biome-ignore lint/performance/noDelete: <explanation>
+      delete (type as any).rooms;
+      // biome-ignore lint/performance/noDelete: <explanation>
+      delete (type as any).buildings;
+    }
   }
 
-  for (const day of Object.values(result.days)) {
-    // biome-ignore lint/performance/noDelete: <explanation>
-    delete (day as any).rooms;
-    // biome-ignore lint/performance/noDelete: <explanation>
-    delete (day as any).buildings;
-    // biome-ignore lint/performance/noDelete: <explanation>
-    delete (day as any).tracks;
+  if (Object.keys(result.days).length > 0) {
+    for (const day of Object.values(result.days)) {
+      // biome-ignore lint/performance/noDelete: <explanation>
+      delete (day as any).rooms;
+      // biome-ignore lint/performance/noDelete: <explanation>
+      delete (day as any).buildings;
+      // biome-ignore lint/performance/noDelete: <explanation>
+      delete (day as any).tracks;
+    }
   }
 
   return result;
@@ -568,11 +584,11 @@ export async function buildData({ year }: { year: string }): Promise<BuildDataRe
   try {
     const url = constants.SCHEDULE_LINK.replace('${YEAR}', year);
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch schedule: ${response.statusText}`);
     }
-    
+
     const text = await response.text();
     const data = await parseData(text);
 
