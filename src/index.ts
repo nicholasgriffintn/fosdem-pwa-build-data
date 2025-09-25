@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/cloudflare";
 import { buildData } from "./lib/fosdem";
 
 const run = async (env: any) => {
-	const year = "2025";
+	const year = "2026";
 	const data = await buildData({ year });
 
 	await env.R2.put(`fosdem-${year}.json`, JSON.stringify(data, null, 2));
