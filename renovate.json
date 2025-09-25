@@ -1,6 +1,50 @@
 {
-	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": [
-		"config:recommended"
-	]
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":combinePatchMinorReleases",
+    ":dependencyDashboard",
+    ":enableVulnerabilityAlertsWithLabel(vulnerability)",
+    ":prConcurrentLimit10",
+    ":prHourlyLimit4",
+    ":prNotPending",
+    ":preserveSemverRanges",
+    ":rebaseStalePrs",
+    ":semanticCommits",
+    ":semanticPrefixFixDepsChoreOthers",
+    ":label(dependencies)",
+    ":timezone(Europe/London)",
+    "docker:enableMajor",
+    "docker:pinDigests",
+    "group:postcss",
+    "group:linters",
+    "group:monorepos",
+    "npm:unpublishSafe",
+    "customManagers:dockerfileVersions",
+    "replacements:all"
+  ],
+  "rangeStrategy": "update-lockfile",
+  "dependencyDashboardAutoclose": true,
+  "platformAutomerge": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  },
+  "vulnerabilityAlerts": {
+    "labels": [
+      "security"
+    ],
+    "automerge": true
+  },
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "description": "Automerge non-major updates",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true
+    }
+  ]
 }
